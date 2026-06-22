@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Leitura Acessível — Braille 3D Print</title>
+<title>Leitura Acessível — Braille 3D</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{
@@ -17,6 +17,8 @@ body{
   justify-content:center;
   padding:24px;
   text-align:center;
+  cursor:pointer;
+  user-select:none;
 }
 .badge{
   background:#1a2a1a;
@@ -29,122 +31,197 @@ body{
   letter-spacing:1px;
   margin-bottom:28px;
   text-transform:uppercase;
+  pointer-events:none;
 }
 h1{
   font-size:clamp(2rem,9vw,4rem);
   line-height:1.2;
   margin-bottom:32px;
   max-width:90vw;
-  color:#f5c518;
+  pointer-events:none;
 }
+/* Overlay de toque — cobre tela toda */
+#overlay{
+  position:fixed;
+  inset:0;
+  background:#111;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+  cursor:pointer;
+  padding:24px;
+  text-align:center;
+  transition:opacity .4s;
+}
+#overlay .tap-icon{
+  font-size:4rem;
+  margin-bottom:20px;
+  animation:pulse 1.5s infinite;
+}
+#overlay .tap-txt{
+  font-size:1.4rem;
+  color:#f5c518;
+  font-weight:bold;
+  margin-bottom:12px;
+}
+#overlay .tap-sub{
+  font-size:1rem;
+  color:#888;
+}
+#overlay .placa-prev{
+  margin-top:24px;
+  font-size:clamp(1.2rem,5vw,2rem);
+  color:#aaa;
+  max-width:80vw;
+}
+@keyframes pulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.15);opacity:.7}
+}
+/* Página principal */
+#main{display:none;}
 .btn{
   background:#f5c518;
   color:#000;
   border:none;
   border-radius:14px;
-  font-size:1.2rem;
+  font-size:1.1rem;
   font-weight:bold;
-  padding:18px 36px;
+  padding:16px 32px;
   cursor:pointer;
   margin:8px;
   transition:opacity .2s;
 }
 .btn:hover{opacity:.85;}
-.btn-stop{
-  background:#333;
-  color:#f5c518;
-  border:1px solid #555;
+.btn-stop{background:#333;color:#f5c518;border:1px solid #555;}
+.status{margin-top:20px;font-size:.9rem;color:#888;min-height:24px;}
+.sub{color:#444;font-size:.75rem;margin-top:28px;line-height:1.8;}
+.sub strong{color:#666;}
+/* Ondas sonoras animadas */
+.waves{
+  display:none;
+  gap:4px;
+  align-items:flex-end;
+  justify-content:center;
+  height:32px;
+  margin-bottom:16px;
 }
-.sub{
-  color:#555;
-  font-size:.8rem;
-  margin-top:28px;
-  line-height:1.8;
+.waves.playing{display:flex;}
+.wave{
+  width:5px;
+  background:#f5c518;
+  border-radius:3px;
+  animation:wave 1s infinite ease-in-out;
 }
-.sub a{color:#888;text-decoration:none;}
-.status{
-  margin-top:20px;
-  font-size:.9rem;
-  color:#888;
-  min-height:24px;
+.wave:nth-child(2){animation-delay:.1s;height:60%}
+.wave:nth-child(3){animation-delay:.2s;height:100%}
+.wave:nth-child(4){animation-delay:.3s;height:75%}
+.wave:nth-child(5){animation-delay:.4s;height:50%}
+@keyframes wave{
+  0%,100%{transform:scaleY(.4)}
+  50%{transform:scaleY(1)}
 }
-.vazio{color:#555;font-size:1.2rem;}
 </style>
 </head>
 <body>
 
-<div class="badge">♿ Leitura Acessível — Braille 3D Print</div>
-
-<h1 id="msg"><span class="vazio">Carregando...</span></h1>
-
-<div>
-  <button class="btn" onclick="falar()">🔊 Ouvir novamente</button>
-  <button class="btn btn-stop" onclick="parar()">⏹ Parar</button>
+<!-- OVERLAY: toque para iniciar -->
+<div id="overlay">
+  <div class="tap-icon">👆</div>
+  <div class="tap-txt">Toque para ouvir</div>
+  <div class="tap-sub">A placa será lida em voz alta</div>
+  <div class="placa-prev" id="prevTxt"></div>
 </div>
 
-<div class="status" id="status"></div>
+<!-- PÁGINA PRINCIPAL -->
+<div id="main">
+  <div class="badge">♿ Leitura Acessível — Braille 3D Print</div>
 
-<p class="sub">
-  Placa em conformidade com <strong style="color:#aaa">ABNT NBR 9050</strong><br>
-  Braille 3D Print · ILBES · Prof. Ivan Arenque Passos<br>
-  <a href="https://ilbes.org.br" target="_blank">ilbes.org.br</a>
-</p>
+  <div class="waves" id="waves">
+    <div class="wave" style="height:50%"></div>
+    <div class="wave" style="height:60%"></div>
+    <div class="wave" style="height:100%"></div>
+    <div class="wave" style="height:75%"></div>
+    <div class="wave" style="height:50%"></div>
+  </div>
+
+  <h1 id="msg">...</h1>
+
+  <div>
+    <button class="btn" onclick="falar()">🔊 Ouvir novamente</button>
+    <button class="btn btn-stop" onclick="parar()">⏹ Parar</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <p class="sub">
+    <strong>ABNT NBR 9050</strong> · ILBES · Prof. Ivan Arenque Passos
+  </p>
+</div>
 
 <script>
-// Lê o parâmetro ?t= da URL
+// Lê parâmetro ?t=
 var params = new URLSearchParams(window.location.search);
-var texto = params.get('t') || '';
+var texto = (params.get('t') || '').replace(/\+/g,' ');
+texto = decodeURIComponent(texto).toUpperCase().trim();
 
-// Decodifica (substitui + por espaço)
-texto = decodeURIComponent(texto.replace(/\+/g, ' ')).toUpperCase().trim();
+// Mostra prévia no overlay
+var prev = document.getElementById('prevTxt');
+if(texto) prev.textContent = '"' + texto + '"';
 
+// Mostra texto na página principal
 var el = document.getElementById('msg');
-var st = document.getElementById('status');
+el.textContent = texto || 'Nenhum texto encontrado.';
+if(texto) document.title = texto;
 
-if(texto){
-  el.textContent = texto;
-  document.title = texto + ' — Leitura Acessível';
-} else {
-  el.innerHTML = '<span class="vazio">Nenhum texto encontrado.</span>';
-  st.textContent = 'Escaneie o QR Code de uma placa Braille 3D Print.';
+var waves = document.getElementById('waves');
+var status = document.getElementById('status');
+
+// Vozes pt-BR
+var vozPT = null;
+function carregarVozes(){
+  var vozes = window.speechSynthesis.getVoices();
+  vozPT = vozes.find(v=>v.lang.startsWith('pt-BR'))
+       || vozes.find(v=>v.lang.startsWith('pt'))
+       || null;
+}
+if(window.speechSynthesis){
+  carregarVozes();
+  window.speechSynthesis.onvoiceschanged = carregarVozes;
 }
 
 function falar(){
-  if(!texto) return;
-  if(!window.speechSynthesis){
-    st.textContent = 'Seu navegador não suporta leitura de voz.';
-    return;
-  }
+  if(!texto || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(texto);
-  u.lang = 'pt-BR';
-  u.rate = 0.82;
+  u.lang  = 'pt-BR';
+  u.rate  = 0.82;
   u.pitch = 1.0;
-  u.onstart  = function(){ st.textContent = '🔊 Lendo...'; };
-  u.onend    = function(){ st.textContent = '✔ Concluído.'; };
-  u.onerror  = function(){ st.textContent = 'Erro na leitura de voz.'; };
-  // Tenta forçar voz em português
-  var vozes = window.speechSynthesis.getVoices();
-  var voz = vozes.find(v => v.lang.startsWith('pt'));
-  if(voz) u.voice = voz;
+  if(vozPT) u.voice = vozPT;
+  u.onstart = function(){ waves.classList.add('playing'); status.textContent='🔊 Lendo...'; };
+  u.onend   = function(){ waves.classList.remove('playing'); status.textContent='✔ Concluído.'; };
+  u.onerror = function(){ waves.classList.remove('playing'); status.textContent=''; };
   window.speechSynthesis.speak(u);
 }
 
 function parar(){
   window.speechSynthesis.cancel();
-  st.textContent = '';
+  waves.classList.remove('playing');
+  status.textContent='';
 }
 
-// Lê automaticamente ao carregar
-window.addEventListener('load', function(){
-  // Aguarda vozes carregarem (necessário em alguns navegadores)
-  if(window.speechSynthesis.getVoices().length === 0){
-    window.speechSynthesis.addEventListener('voiceschanged', function(){
-      setTimeout(falar, 400);
-    });
-  } else {
-    setTimeout(falar, 600);
-  }
+// TOQUE NO OVERLAY — desbloqueia áudio e lê
+document.getElementById('overlay').addEventListener('click', function(){
+  var ov = this;
+  ov.style.opacity='0';
+  setTimeout(function(){ ov.style.display='none'; }, 400);
+  document.getElementById('main').style.display='flex';
+  document.getElementById('main').style.flexDirection='column';
+  document.getElementById('main').style.alignItems='center';
+  // Lê imediatamente após toque (contexto de áudio liberado)
+  falar();
 });
 </script>
 </body>
